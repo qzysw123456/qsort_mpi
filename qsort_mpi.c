@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <time.h>
 #include <string.h>
-
+#include <math.h>
 static void print_numbers(char const * const filename,uint32_t const * const numbers,uint32_t const nnumbers)
 {
     FILE * fout;
@@ -35,12 +35,25 @@ static void print_time(double const seconds)
 {
     printf("Sort Time: %0.04fs\n", seconds);
 }
-
-int partition (int arr[], int low, int high, int Pivit)
+void Swap(int* x,int* y)
 {
+    int tmp = *x;
+    *x = * y;
+    *y = tmp;
+}
+int mediumTri(int* A,int x,int y,int z)
+{
+    if(A[x]>A[y]) Swap(&x, &y);
+    if(A[y]>A[z]) Swap(&y, &z);
+    if(A[x]>A[y]) Swap(&x, &y);
+    return y;
+}
+int partition (int arr[], int low, int high)
+{
+    int select = mediumTri(arr, low, high, (low+high)>>1);
+    Swap(&arr[select], &arr[high]);
     int pivot = arr[high];    // pivot
     int i = (low - 1);  // Index of smaller element
-    int tmp;
     for (int j = low; j <= high- 1; j++)
     {
         // If current element is smaller than or
@@ -48,44 +61,100 @@ int partition (int arr[], int low, int high, int Pivit)
         if (arr[j] <= pivot)
         {
             i++;    // increment index of smaller element
-            tmp = arr[i];
-            arr[i] = arr[j];
-            arr[j] = tmp;
-            //swap(&arr[i], &arr[j]);
+            Swap(&arr[i], &arr[j]);
         }
     }
-    tmp = arr[i+1];
-    arr[i+1] = arr[high];
-    arr[high] = tmp;
-    //swap(&arr[i + 1], &arr[high]);
+    Swap(&arr[i + 1], &arr[high]);
     return (i + 1);
 }
+int Partition(int arr[],int low,int high,int pivit)
+{
+    int i = low - 1;
+    for(int j = low ; j <= high; j++){
+        if(arr[j]<=pivit){
+            i++;
+            Swap(&arr[i],&arr[j]);
+        }
+    }
+    return i;
+}
+
+//int LeftChild(int x){
+//    return x<<1|1;
+//}
+//void PercDown(int* A, int i, int N)
+//{
+//    int child;
+//    int tmp;
+//    for (tmp = A[i]; LeftChild(i)<N; i = child)
+//    {
+//        child = LeftChild(i);
+//        if (child != N-1 && A[child+1]>A[child])
+//            child++;
+//        if (A[i]<A[child])
+//            Swap(&A[i],&A[child]);
+//        else
+//            break;
+//    }
+//}
+//void HeapSort(int* A, int N)
+//{
+//    int i;
+//    for (i  = N/2;  i>=0; i--)
+//        PercDown(A, i, N);
+//    for ( i = N-1; i > 0; i--)
+//    {
+//        Swap(&A[0], &A[i]);
+//        PercDown(A, 0, i);
+//    }
+//}
 void quickSort(int arr[], int low, int high)
 {
+    /*bool flag = true;
+     for(int i = low; i < high ; i++) if(arr[i]>arr[i+1]) {flag = false;break;}
+     if(flag) return;*/
     if (low < high)
     {
         /* pi is partitioning index, arr[p] is now
          at right place */
-        int pi = partition(arr, low, high, -1);
-        
+        int pi = partition(arr, low, high);
         // Separately sort elements before
         // partition and after partition
         quickSort(arr, low, pi - 1);
         quickSort(arr, pi + 1, high);
     }
 }
-int binary_find(int arr[],int low,int high,int x)
-{
-    while(low<high){
-        int mid = (low+high)>>1;
-        if(arr[mid]<x){
-            low = mid + 1;
-        }
-        else
-            high = mid;
-    }
-    return low;
-}
+//int binary_find(int arr[],int low,int high,int x)
+//{
+//    while(low<high){
+//        int mid = (low+high)>>1;
+//        if(arr[mid]<x){
+//            low = mid + 1;
+//        }
+//        else
+//            high = mid;
+//    }
+//    return low;
+//}
+//void introsort(int* A,int l,int r,int Depth)
+//{
+//    int len = r - l + 1;
+//    if(len<=1)
+//        return;
+//    else if(Depth==0){
+//        HeapSort(A+l, len);
+//    }
+//    else{
+//        int p = partition(A,l,r);
+//        introsort(A, l, p-1, Depth -1 );
+//        introsort(A, p+1, r, Depth -1 );
+//    }
+//}
+//void Sort(int* A,int l,int r)
+//{
+//    int maxLen =floor(log2(r-l+1))*2;
+//    introsort(A, l, r, maxLen);
+//}
 int LOG(int x)
 {
     int cnt = 0;
@@ -114,7 +183,7 @@ int main(int argc,char** argv) {
     int BlockSize = N/world_size;
     srand(myid);
     for(int i = 0;i < BlockSize; i++ )
-        A[i] = rand()% N;
+        A[i] = rand();
     
     double Start = monotonic_seconds();
     
@@ -134,13 +203,14 @@ int main(int argc,char** argv) {
     int SendNum;
     int RecvNum;
     while(level != 1){
-        quickSort(A,0,BlockSize-1);
+        //Sort(A,0,BlockSize-1);
         //for(int i=0;i<BlockSize;i++){
         //    printf("%d ",A[i]);
         //}
         //printf("I am %d \n",world_rank);
         
-        int Pivit = A[BlockSize/2];
+        //int Pivit = A[BlockSize/2];
+        int Pivit = A[rand()%BlockSize];
         if( myid == 0) {
             Pivit_set = malloc(num_procs*sizeof(int));
         }
@@ -151,8 +221,8 @@ int main(int argc,char** argv) {
         }
         MPI_Bcast(&Comm_Pivit,1,MPI_INT,0,NewComm[level]);
         //printf("i am %d my pivit is %d comm pivit is %d\n",world_rank,Pivit,Comm_Pivit);
-        int pos = binary_find(A,0,BlockSize,Comm_Pivit);
-        
+        //int pos = binary_find(A,0,BlockSize,Comm_Pivit);
+        int pos = Partition(A,0,BlockSize-1,Comm_Pivit);
         if(myid>=num_procs/2){
             //before pos
             int RecID = myid - num_procs/2;
@@ -190,7 +260,7 @@ int main(int argc,char** argv) {
     }
     quickSort(A,0,BlockSize-1);
     //MPI_Gather(A,BlockSize,MPI_INT,B,1,MPI_INT,0,MPI_COMM_WORLD);
-    double End = monotonic_seconds();
+    
     
 //    for(int i=0;i<BlockSize;i++){
 //        printf("%d ",A[i]);
@@ -200,13 +270,15 @@ int main(int argc,char** argv) {
 
     int RecvBlockSize;
     if(world_rank == 0){
-        print_time(End-Start);
+        //print_time(End-Start);
         for(int i=1;i<world_size;i++){
             MPI_Recv(&RecvBlockSize,1,MPI_INT,i,0,MPI_COMM_WORLD,MPI_STATUS_IGNORE);
             MPI_Recv(A+BlockSize,RecvBlockSize,MPI_INT,i,0,MPI_COMM_WORLD,MPI_STATUS_IGNORE);
             BlockSize += RecvBlockSize;
         }
-        print_numbers(argv[2],A,N);
+        double End = monotonic_seconds();
+        print_time(End-Start);
+        //print_numbers(argv[2],A,N);
     }
     else{
         MPI_Send(&BlockSize,1,MPI_INT,0,0,MPI_COMM_WORLD);
