@@ -83,8 +83,7 @@ void quickSort(int arr[], int low, int high)
     }
 }
 
-int A[100000000];
-int B[100000000];
+int *A,*B;
 int main(int argc,char** argv) {
     int num_procs, myid;
     int world_rank,world_size;
@@ -100,6 +99,8 @@ int main(int argc,char** argv) {
     
     int BlockSize = N/world_size;
     srand(myid);
+    A = malloc(N*sizeof(int));
+    B = malloc(N*sizeof(int));
     for(int i = 0;i < BlockSize; i++ )
         A[i] = rand();
     
